@@ -1,0 +1,5 @@
+{
+  "name": "Initial Outreach",
+  "subject": "Hi {{name}} | Quick note",
+  "body": "Hi {{name}},\n\nI wanted to reach out regarding {{company}}.\n{{customLine}}\n\nBest regards,\nYour Name"
+}

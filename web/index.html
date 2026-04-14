@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MailFlow GitHub Edition</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">MailFlow</div>
+      <div class="tag">GitHub Edition</div>
+      <nav>
+        <a href="#overview">Overview</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#secrets">Secrets</a>
+        <a href="#templates">Templates</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="overview">
+        <div>
+          <span class="pill">GitHub Pages + GitHub Actions</span>
+          <h1>Bulk email flow app hosted on GitHub, with Google Sheets as the only source of truth.</h1>
+          <p>This version keeps your UI on GitHub Pages and runs import, send, and follow-up jobs through GitHub Actions using repository secrets.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="btn primary" href="../actions" target="_blank" rel="noreferrer">Open Actions</a>
+          <a class="btn" href="https://docs.github.com/actions/security-guides/using-secrets-in-github-actions" target="_blank" rel="noreferrer">Secrets Guide</a>
+        </div>
+      </section>
+
+      <section class="grid" id="workflow">
+        <div class="card">
+          <h3>1. Initialize sheet</h3>
+          <p>Run <strong>MailFlow Runner</strong> with task <code>init-sheet</code>.</p>
+        </div>
+        <div class="card">
+          <h3>2. Import contacts</h3>
+          <p>Commit your CSV/XLSX into <code>imports/</code>, then run task <code>import-file</code>.</p>
+        </div>
+        <div class="card">
+          <h3>3. Send initial emails</h3>
+          <p>Choose your campaign and template JSON, then run <code>send-initial</code>.</p>
+        </div>
+        <div class="card">
+          <h3>4. Send follow-ups</h3>
+          <p>Run <code>send-followup</code> with the required stage from 1 to 10.</p>
+        </div>
+      </section>
+
+      <section class="card" id="secrets">
+        <h2>Required secrets</h2>
+        <ul>
+          <li>GOOGLE_CREDENTIALS_JSON</li>
+          <li>MASTER_SHEET_ID</li>
+          <li>MASTER_SHEET_TAB</li>
+          <li>SMTP_HOST</li>
+          <li>SMTP_PORT</li>
+          <li>SMTP_SECURE</li>
+          <li>SMTP_USER</li>
+          <li>SMTP_PASS</li>
+          <li>SMTP_FROM_EMAIL</li>
+          <li>SMTP_FROM_NAME</li>
+        </ul>
+      </section>
+
+      <section class="card" id="templates">
+        <h2>Template placeholders</h2>
+        <div class="code">{{name}}<br>{{email}}<br>{{company}}<br>{{customLine}}</div>
+        <p>Business Segment is stored in the master sheet for filtering and future template strategy, but it is not inserted by default.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "mailflow-github-only",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "init-sheet": "node scripts/init-sheet.js",
+    "import-file": "node scripts/import-file.js",
+    "send-initial": "node scripts/send-stage.js initial",
+    "send-followup": "node scripts/send-stage.js followup"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0",
+    "nodemailer": "^6.10.0",
+    "uuid": "^11.1.0",
+    "validator": "^13.12.0",
+    "xlsx": "^0.18.5"
+  }
+}
