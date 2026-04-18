@@ -1,0 +1,14 @@
+.env
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+uploads/
+private/
+*.xlsx
+*.xls
+!data/recipients_sample.csv
+logs/*.csv
+!logs/.gitkeep
+

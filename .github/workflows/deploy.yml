@@ -1,0 +1,41 @@
+name: Deploy Mailflow Runner
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate Mailflow project
+        run: python scripts/mailflow.py --mode validate --config campaigns/campaign_config.yml
+
+      - name: Package deployable runner
+        uses: actions/upload-artifact@v4
+        with:
+          name: mailflow-runner
+          path: |
+            campaigns/
+            data/recipients_sample.csv
+            scripts/
+            templates/
+            requirements.txt
+            README.md
+

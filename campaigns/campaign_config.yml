@@ -1,0 +1,37 @@
+campaign:
+  name: "Starter Campaign"
+  default_template: "cold_lead"
+  mode: "campaign"
+
+data_source:
+  # Options: local_csv, local_excel, google_csv
+  type: "local_csv"
+  path: "data/recipients_sample.csv"
+  # For google_csv, set this secret/variable in GitHub Actions:
+  # url_env: "GOOGLE_SHEET_CSV_URL"
+
+columns:
+  email: "email"
+  name: "name"
+  template: "template"
+  status: "status"
+  do_not_email: "do_not_email"
+  next_followup_at: "next_followup_at"
+  followup_stage: "followup_stage"
+
+sending:
+  from_name: "Mailflow"
+  reply_to: ""
+  dry_run_recipient_env: "TEST_RECIPIENT_EMAIL"
+  max_emails_per_run: 25
+  delay_seconds: 5
+  stop_after_failures: 5
+
+followups:
+  enabled: true
+  max_stage: 1
+  templates:
+    "1": "follow_up_1"
+  days_after_initial:
+    "1": 3
+
