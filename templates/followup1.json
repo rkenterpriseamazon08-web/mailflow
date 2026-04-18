@@ -1,5 +1,0 @@
-{
-  "name": "Follow-up 1",
-  "subject": "Following up, {{name}}",
-  "body": "Hi {{name}},\n\nJust following up on my earlier note.\n{{customLine}}\n\nBest regards,\nYour Name"
-}
