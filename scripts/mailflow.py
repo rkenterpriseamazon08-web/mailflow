@@ -23,7 +23,8 @@ from jinja2 import Environment, StrictUndefined
 ROOT = Path(__file__).resolve().parents[1]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SUPPORTED_CLIENT_TYPES = {
-    "storage office",
+    "storage",
+    "office",
     "cafe",
     "house",
     "public toilet",

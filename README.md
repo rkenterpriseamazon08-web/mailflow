@@ -70,7 +70,8 @@ name,email,company,client_type,template,status,next_followup_at,followup_stage,d
 The `client_type` value must be one of:
 
 ```text
-storage office
+storage
+office
 cafe
 house
 public toilet
@@ -90,7 +91,7 @@ Templates live in `templates/` and use Jinja-style placeholders. Every template 
 ```html
 ---
 subject: "Quick idea for {{ company }}"
-clientType: "storage office"
+clientType: "storage"
 ---
 <p>Hi {{ name }},</p>
 ```
@@ -100,10 +101,11 @@ The template name is the file name without `.html`.
 Current templates:
 
 ```text
-cold_lead        -> storage office
-warm_lead        -> cafe
-existing_client  -> house
-follow_up_1      -> public toilet
+storage          -> storage
+office           -> office
+cafe             -> cafe
+house            -> house
+public_toilet    -> public toilet
 security_cabin   -> security cabin
 ```
 

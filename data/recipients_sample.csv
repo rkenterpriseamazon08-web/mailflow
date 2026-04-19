@@ -1,4 +1,7 @@
 name,email,company,client_type,template,status,next_followup_at,followup_stage,do_not_email,service,custom_note
-Ravi Sharma,ravi@example.com,Acme Pvt Ltd,storage office,cold_lead,pending,,0,no,Storage setup,Asked for pricing
-Priya Mehta,priya@example.com,Northstar Cafe,cafe,warm_lead,pending,,0,no,Cafe planning,Interested in saving admin time
-Amit Verma,amit@example.com,Beta Homes,house,existing_client,pending,,0,yes,House plan,Do not email sample row
+Ravi Sharma,ravi@example.com,Acme Storage,storage,storage,pending,,0,no,Storage setup,Asked for pricing
+Neha Kapoor,neha@example.com,Kapoor Offices,office,office,pending,,0,no,Office setup,Needs a compact plan
+Priya Mehta,priya@example.com,Northstar Cafe,cafe,cafe,pending,,0,no,Cafe planning,Interested in saving admin time
+Amit Verma,amit@example.com,Beta Homes,house,house,pending,,0,yes,House plan,Do not email sample row
+Imran Khan,imran@example.com,Civic Facilities,public toilet,public_toilet,pending,,0,no,Public toilet layout,Asked about durable fittings
+Sara Joseph,sara@example.com,Secure Gate Services,security cabin,security_cabin,pending,,0,no,Security cabin,Needs a quick estimate

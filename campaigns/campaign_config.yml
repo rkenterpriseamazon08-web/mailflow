@@ -1,6 +1,6 @@
 campaign:
   name: "Starter Campaign"
-  default_template: "cold_lead"
+  default_template: "storage"
   mode: "campaign"
 
 data_source:
@@ -32,6 +32,6 @@ followups:
   enabled: true
   max_stage: 1
   templates:
-    "1": "follow_up_1"
+    "1": "storage"
   days_after_initial:
     "1": 3
