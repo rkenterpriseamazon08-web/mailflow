@@ -68,6 +68,11 @@ def read_recipients(config: dict[str, Any]) -> pd.DataFrame:
         url_env = source.get("url_env", "GOOGLE_SHEET_CSV_URL")
         sheet_url = os.environ.get(url_env)
         if not sheet_url:
+            fallback_path = source.get("fallback_path")
+            if fallback_path:
+                print(f"{url_env} is not set. Using fallback source: {fallback_path}")
+                df = pd.read_csv(resolve_path(fallback_path))
+                return normalize_columns(df)
             raise RuntimeError(f"Missing environment variable: {url_env}")
         with urlopen(sheet_url, timeout=30) as response:
             df = pd.read_csv(response)
@@ -235,14 +240,13 @@ def smtp_settings() -> dict[str, Any]:
 
 def send_email(email: RenderedEmail, config: dict[str, Any], dry_run: bool) -> str:
     sending = config.get("sending", {})
-    test_recipient_env = sending.get("dry_run_recipient_env", "TEST_RECIPIENT_EMAIL")
-    recipient = os.environ.get(test_recipient_env, email.recipient) if dry_run else email.recipient
 
     if dry_run:
-        print(f"[DRY RUN] Would send to {email.recipient}; test target is {recipient}")
+        print(f"[DRY RUN] Would send to {email.recipient}")
         print(f"[DRY RUN] Subject: {email.subject}")
         return "dry_run"
 
+    recipient = email.recipient
     settings = smtp_settings()
     from_name = sending.get("from_name", "Mailflow")
     reply_to = sending.get("reply_to", "")
@@ -405,4 +409,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

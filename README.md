@@ -39,17 +39,13 @@ SMTP_PASSWORD=your-zoho-app-password
 FROM_EMAIL=your-email@yourdomain.com
 ```
 
-Recommended for dry runs:
-
-```text
-TEST_RECIPIENT_EMAIL=your-test-email@example.com
-```
-
-Optional for Google Sheets CSV source:
+Required when using Google Sheets:
 
 ```text
 GOOGLE_SHEET_CSV_URL=https://...
 ```
+
+`TEST_RECIPIENT_EMAIL` is not required. In this version, `dry_run` means preview only. It does not send emails anywhere.
 
 ## How To Run A Campaign
 
@@ -57,13 +53,13 @@ GOOGLE_SHEET_CSV_URL=https://...
 2. Go to **Actions**.
 3. Open **Send Campaign**.
 4. Click **Run workflow**.
-5. Keep `dry_run` enabled first.
+5. Keep `dry_run` enabled first. This previews the emails and sends nothing.
 6. Check the workflow log and uploaded artifact.
-7. Run again with `dry_run` disabled only after the preview looks correct.
+7. Run again with `dry_run` disabled to send directly to the email addresses in your Google Sheet.
 
 ## Recipient Columns
 
-The sample file is `data/recipients_sample.csv`.
+The live source is your Google Sheet through the `GOOGLE_SHEET_CSV_URL` secret. The sample file is `data/recipients_sample.csv`.
 
 Expected columns:
 
@@ -134,9 +130,8 @@ python scripts\mailflow.py --mode campaign --dry-run --max-emails 3
 ## Safety Notes
 
 - Start with dry runs.
-- Send a test email to yourself first.
+- Use only test recipients until the workflow is proven.
 - Respect Zoho sending limits.
 - Do not send bulk bursts.
 - Include opt-out handling in your client process.
 - Do not commit passwords or client data.
-
