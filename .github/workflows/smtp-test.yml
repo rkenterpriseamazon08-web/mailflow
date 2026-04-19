@@ -28,6 +28,7 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SMTP_SECURITY: ${{ secrets.SMTP_SECURITY }}
           TEST_RECIPIENT_EMAIL: ${{ secrets.TEST_RECIPIENT_EMAIL }}
         run: |
           if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$FROM_EMAIL" ]; then

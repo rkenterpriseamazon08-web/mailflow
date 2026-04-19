@@ -34,6 +34,7 @@ Set these environment variables before sending real emails:
 ```text
 SMTP_HOST=smtp.zoho.com
 SMTP_PORT=587
+SMTP_SECURITY=starttls
 SMTP_USER=your-email@yourdomain.com
 SMTP_PASSWORD=your-zoho-app-password
 FROM_EMAIL=your-email@yourdomain.com
@@ -73,10 +74,29 @@ Required for real sending:
 ```text
 SMTP_HOST=smtp.zoho.com
 SMTP_PORT=587
+SMTP_SECURITY=starttls
 SMTP_USER=your-email@yourdomain.com
 SMTP_PASSWORD=your-zoho-app-password
 FROM_EMAIL=your-email@yourdomain.com
 ```
+
+For Zoho SMTP, use one of these combinations:
+
+```text
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=587
+SMTP_SECURITY=starttls
+```
+
+or:
+
+```text
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_SECURITY=ssl
+```
+
+If your Zoho account is in the India region, use `smtp.zoho.in` instead of `smtp.zoho.com`.
 
 Required when using Google Sheets:
 

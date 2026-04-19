@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import csv
 import os
 import re
@@ -318,14 +319,45 @@ def smtp_settings() -> dict[str, Any]:
         "user": os.environ["SMTP_USER"],
         "password": os.environ["SMTP_PASSWORD"],
         "from_email": os.environ["FROM_EMAIL"],
+        "security": os.environ.get("SMTP_SECURITY", "auto").strip().lower(),
     }
+
+
+@contextmanager
+def smtp_connection(settings: dict[str, Any]):
+    host = settings["host"]
+    port = settings["port"]
+    security = settings["security"]
+
+    if security == "auto":
+        security = "ssl" if port == 465 else "starttls"
+
+    try:
+        if security == "ssl":
+            smtp = smtplib.SMTP_SSL(host, port, timeout=30)
+        else:
+            smtp = smtplib.SMTP(host, port, timeout=30)
+            if security == "starttls":
+                smtp.starttls()
+        smtp.login(settings["user"], settings["password"])
+        yield smtp
+    except smtplib.SMTPServerDisconnected as exc:
+        raise RuntimeError(
+            "SMTP server closed the connection. Check SMTP_HOST, SMTP_PORT, and SMTP_SECURITY. "
+            "For Zoho, use smtp.zoho.com or smtp.zoho.in with port 587 and SMTP_SECURITY=starttls, "
+            "or port 465 and SMTP_SECURITY=ssl."
+        ) from exc
+    finally:
+        try:
+            smtp.quit()
+        except Exception:
+            pass
 
 
 def verify_smtp_login() -> None:
     settings = smtp_settings()
-    with smtplib.SMTP(settings["host"], settings["port"], timeout=30) as smtp:
-        smtp.starttls()
-        smtp.login(settings["user"], settings["password"])
+    with smtp_connection(settings):
+        pass
 
 
 def send_smtp_test_email() -> None:
@@ -339,9 +371,7 @@ def send_smtp_test_email() -> None:
         "This is a Mailflow SMTP test email. If you received this, Zoho SMTP sending is working."
     )
 
-    with smtplib.SMTP(settings["host"], settings["port"], timeout=30) as smtp:
-        smtp.starttls()
-        smtp.login(settings["user"], settings["password"])
+    with smtp_connection(settings) as smtp:
         smtp.send_message(message)
 
 
@@ -367,9 +397,7 @@ def send_email(email: RenderedEmail, config: dict[str, Any], dry_run: bool) -> s
     message.set_content("This email contains HTML content. Please view it in an HTML mail client.")
     message.add_alternative(email.html, subtype="html")
 
-    with smtplib.SMTP(settings["host"], settings["port"], timeout=30) as smtp:
-        smtp.starttls()
-        smtp.login(settings["user"], settings["password"])
+    with smtp_connection(settings) as smtp:
         smtp.send_message(message)
 
     return "sent"
@@ -437,8 +465,14 @@ def update_local_status(
 
 def run(args: argparse.Namespace) -> int:
     config = load_config(args.config)
-    df = read_recipients(config)
     mode = args.mode or config.get("campaign", {}).get("mode", "campaign")
+
+    if mode == "smtp-test":
+        send_smtp_test_email()
+        print("SMTP test email sent.")
+        return 0
+
+    df = read_recipients(config)
 
     if mode == "validate":
         print(f"Loaded {len(df)} recipient rows")
@@ -450,11 +484,6 @@ def run(args: argparse.Namespace) -> int:
             if not client_type:
                 print(f"Template warning: {template} has no clientType")
             print(f"Template OK: {template}")
-        return 0
-
-    if mode == "smtp-test":
-        send_smtp_test_email()
-        print("SMTP test email sent.")
         return 0
 
     rows = choose_followup_rows(df, config) if mode == "followups" else choose_campaign_rows(df, config)

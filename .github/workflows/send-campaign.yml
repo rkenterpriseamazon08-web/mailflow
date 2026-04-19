@@ -46,6 +46,7 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SMTP_SECURITY: ${{ secrets.SMTP_SECURITY }}
           GOOGLE_SHEET_CSV_URL: ${{ secrets.GOOGLE_SHEET_CSV_URL }}
         run: |
           echo "dry_run input: ${{ inputs.dry_run }}"
