@@ -67,6 +67,16 @@ Expected columns:
 name,email,company,client_type,template,status,next_followup_at,followup_stage,do_not_email,service,custom_note
 ```
 
+The `client_type` value must be one of:
+
+```text
+storage office
+cafe
+house
+public toilet
+security cabin
+```
+
 Rows are eligible for campaign sending when:
 
 - `status` is blank, `pending`, or `queued`
@@ -75,25 +85,29 @@ Rows are eligible for campaign sending when:
 
 ## Templates
 
-Templates live in `templates/` and use Jinja-style placeholders:
+Templates live in `templates/` and use Jinja-style placeholders. Every template must include one supported `clientType` in the front matter:
 
 ```html
 ---
 subject: "Quick idea for {{ company }}"
+clientType: "storage office"
 ---
 <p>Hi {{ name }},</p>
 ```
 
 The template name is the file name without `.html`.
 
-Examples:
+Current templates:
 
 ```text
-cold_lead
-warm_lead
-existing_client
-follow_up_1
+cold_lead        -> storage office
+warm_lead        -> cafe
+existing_client  -> house
+follow_up_1      -> public toilet
+security_cabin   -> security cabin
 ```
+
+When a campaign runs, Mailflow reads the recipient row's `client_type`. It only uses a template with the same `clientType`. If the selected template does not match, Mailflow automatically looks for another matching template. If no matching template exists, that row is skipped safely.
 
 ## Follow-Ups
 
