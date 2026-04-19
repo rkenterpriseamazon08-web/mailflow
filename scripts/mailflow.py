@@ -22,6 +22,13 @@ from jinja2 import Environment, StrictUndefined
 
 ROOT = Path(__file__).resolve().parents[1]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+SUPPORTED_CLIENT_TYPES = {
+    "storage office",
+    "cafe",
+    "house",
+    "public toilet",
+    "security cabin",
+}
 
 
 @dataclass
@@ -82,7 +89,11 @@ def read_recipients(config: dict[str, Any]) -> pd.DataFrame:
     return normalize_columns(df)
 
 
-def parse_template(template_name: str) -> tuple[str, str]:
+def normalize_client_type(value: Any) -> str:
+    return str(value).strip().lower().replace("_", " ").replace("-", " ")
+
+
+def parse_template(template_name: str) -> tuple[str, str, dict[str, Any]]:
     template_path = resolve_path(f"templates/{template_name}.html")
     if not template_path.exists():
         raise FileNotFoundError(f"Template not found: {template_path}")
@@ -93,20 +104,47 @@ def parse_template(template_name: str) -> tuple[str, str]:
         meta = yaml.safe_load(front_matter) or {}
         subject = str(meta.get("subject", "")).strip()
     else:
+        meta = {}
         subject = ""
         body = raw
 
     if not subject:
         raise RuntimeError(f"Template {template_name} is missing a subject")
-    return subject, body.strip()
+    return subject, body.strip(), meta
 
 
 def render_template(template_name: str, context: dict[str, Any]) -> tuple[str, str]:
-    subject_template, body_template = parse_template(template_name)
+    subject_template, body_template, _ = parse_template(template_name)
     env = Environment(autoescape=True, undefined=StrictUndefined)
     subject = env.from_string(subject_template).render(**context)
     html = env.from_string(body_template).render(**context)
     return subject, html
+
+
+def template_client_type(template_name: str) -> str:
+    _, _, meta = parse_template(template_name)
+    return normalize_client_type(meta.get("clientType", meta.get("client_type", "")))
+
+
+def safe_template_client_type(template_name: str) -> str:
+    try:
+        return template_client_type(template_name)
+    except FileNotFoundError:
+        return ""
+
+
+def all_template_names() -> list[str]:
+    return sorted(path.stem for path in resolve_path("templates").glob("*.html"))
+
+
+def matching_template_for_client_type(client_type: str) -> str:
+    normalized = normalize_client_type(client_type)
+    if normalized not in SUPPORTED_CLIENT_TYPES:
+        return ""
+    for template_name in all_template_names():
+        if template_client_type(template_name) == normalized:
+            return template_name
+    return ""
 
 
 def truthy(value: Any) -> bool:
@@ -193,12 +231,14 @@ def build_emails(
     cols = config.get("columns", {})
     email_col = cols.get("email", "email")
     template_col = cols.get("template", "template")
+    client_type_col = cols.get("client_type", "client_type")
     default_template = config.get("campaign", {}).get("default_template", "cold_lead")
     followup_templates = config.get("followups", {}).get("templates", {})
     stage_col = cols.get("followup_stage", "followup_stage")
 
     emails: list[RenderedEmail] = []
     for row_number, row in rows:
+        client_type = normalize_client_type(row.get(client_type_col, ""))
         if mode == "followups":
             next_stage = as_int(row.get(stage_col, 0), 0) + 1
             template_name = followup_templates.get(str(next_stage), f"follow_up_{next_stage}")
@@ -208,6 +248,14 @@ def build_emails(
                 or str(row.get(template_col, "")).strip()
                 or default_template
             )
+
+        if safe_template_client_type(template_name) != client_type:
+            template_name = matching_template_for_client_type(client_type)
+        if not template_name:
+            print(
+                f"No matching template for client type '{client_type}' on row {int(row_number) + 2}. Skipping."
+            )
+            continue
 
         context = row_context(row, config)
         subject, html = render_template(template_name, context)
@@ -335,8 +383,13 @@ def run(args: argparse.Namespace) -> int:
 
     if mode == "validate":
         print(f"Loaded {len(df)} recipient rows")
-        for template in sorted(path.stem for path in resolve_path("templates").glob("*.html")):
-            parse_template(template)
+        for template in all_template_names():
+            _, _, meta = parse_template(template)
+            client_type = normalize_client_type(meta.get("clientType", meta.get("client_type", "")))
+            if client_type and client_type not in SUPPORTED_CLIENT_TYPES:
+                raise RuntimeError(f"Template {template} has unsupported clientType: {client_type}")
+            if not client_type:
+                print(f"Template warning: {template} has no clientType")
             print(f"Template OK: {template}")
         return 0
 

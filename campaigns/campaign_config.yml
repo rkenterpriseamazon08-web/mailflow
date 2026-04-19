@@ -14,6 +14,7 @@ data_source:
 columns:
   email: "email"
   name: "name"
+  client_type: "client_type"
   template: "template"
   status: "status"
   do_not_email: "do_not_email"

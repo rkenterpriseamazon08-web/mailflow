@@ -1,5 +1,4 @@
 name,email,company,client_type,template,status,next_followup_at,followup_stage,do_not_email,service,custom_note
-Ravi Sharma,ravi@example.com,Acme Pvt Ltd,warm_lead,warm_lead,pending,,0,no,Web Design,Asked for pricing
-Priya Mehta,priya@example.com,Northstar Traders,cold_lead,cold_lead,pending,,0,no,Automation,Interested in saving admin time
-Amit Verma,amit@example.com,Beta Retail,existing_client,existing_client,pending,,0,yes,Maintenance,Do not email sample row
-
+Ravi Sharma,ravi@example.com,Acme Pvt Ltd,storage office,cold_lead,pending,,0,no,Storage setup,Asked for pricing
+Priya Mehta,priya@example.com,Northstar Cafe,cafe,warm_lead,pending,,0,no,Cafe planning,Interested in saving admin time
+Amit Verma,amit@example.com,Beta Homes,house,existing_client,pending,,0,yes,House plan,Do not email sample row
