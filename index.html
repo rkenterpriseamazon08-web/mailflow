@@ -18,7 +18,7 @@
     <main>
       <section class="notice">
         <strong>GitHub Pages preview mode</strong>
-        <span>This published page can show the workflow, import data, edit templates in your browser, and preview live status. Real Zoho SMTP sending runs from the backend app or GitHub Actions, not from this public page.</span>
+        <span>This published page can import data and preview the workflow. Real Zoho SMTP sending uses your GitHub Actions secrets, so click the real-send button after previewing.</span>
       </section>
 
       <section class="panel" id="importPanel">
@@ -45,7 +45,8 @@
             <p id="rowCount">0 rows loaded</p>
           </div>
           <div class="actions">
-            <button id="sendEmails">Send Bulk Emails</button>
+            <button id="sendEmails">Preview Bulk Emails</button>
+            <button id="openActions" class="secondary">Send Real Emails in GitHub Actions</button>
           </div>
         </div>
         <div class="table-wrap">

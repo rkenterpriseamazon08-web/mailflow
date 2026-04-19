@@ -91,7 +91,12 @@ def read_recipients(config: dict[str, Any]) -> pd.DataFrame:
 
 
 def normalize_client_type(value: Any) -> str:
-    return str(value).strip().lower().replace("_", " ").replace("-", " ")
+    normalized = str(value).strip().lower().replace("_", " ").replace("-", " ")
+    if normalized == "security":
+        return "security cabin"
+    if normalized == "toilet":
+        return "public toilet"
+    return normalized
 
 
 def parse_template(template_name: str) -> tuple[str, str, dict[str, Any]]:

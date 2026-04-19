@@ -6,13 +6,15 @@ This is not a public web app. It is a GitHub-based runner designed for small, co
 
 ## Dashboard App
 
-The repository now includes a small dashboard for the first phase of the app:
+The repository includes a small dashboard for the first phase of the app:
 
 - Paste a Google Sheet CSV link or upload a downloaded CSV.
 - Click **Next** to preview all recipients in a table.
 - Open **Templates** to edit and save one template per client type.
-- Click **Send Bulk Emails** to send through Zoho SMTP.
-- Watch each row update with live status.
+- On GitHub Pages, click **Preview Bulk Emails** to verify matching and row status.
+- Click **Send Real Emails in GitHub Actions** to open the workflow that can use your repository secrets.
+
+GitHub Pages cannot send Zoho SMTP emails directly because public browser JavaScript cannot safely access `SMTP_PASSWORD`. Real sending happens through GitHub Actions or the local FastAPI app.
 
 Run it with:
 
@@ -38,6 +40,8 @@ FROM_EMAIL=your-email@yourdomain.com
 ```
 
 Keep **Preview only** checked for the first test. Preview mode imports the rows and shows the send status without sending real emails.
+
+On the published GitHub Pages site, the imported CSV is only for browser preview. GitHub Actions sends from the `GOOGLE_SHEET_CSV_URL` repository secret.
 
 ## Folder Structure
 
@@ -112,6 +116,8 @@ house
 public toilet
 security cabin
 ```
+
+`security` is also accepted as an alias for `security cabin`.
 
 Rows are eligible for campaign sending when:
 
