@@ -4,6 +4,41 @@ Mailflow is a free, no-hosting email automation setup that runs from GitHub Acti
 
 This is not a public web app. It is a GitHub-based runner designed for small, controlled campaigns.
 
+## Dashboard App
+
+The repository now includes a small dashboard for the first phase of the app:
+
+- Paste a Google Sheet CSV link or upload a downloaded CSV.
+- Click **Next** to preview all recipients in a table.
+- Open **Templates** to edit and save one template per client type.
+- Click **Send Bulk Emails** to send through Zoho SMTP.
+- Watch each row update with live status.
+
+Run it with:
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000
+```
+
+Set these environment variables before sending real emails:
+
+```text
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=587
+SMTP_USER=your-email@yourdomain.com
+SMTP_PASSWORD=your-zoho-app-password
+FROM_EMAIL=your-email@yourdomain.com
+```
+
+Keep **Preview only** checked for the first test. Preview mode imports the rows and shows the send status without sending real emails.
+
 ## Folder Structure
 
 ```text

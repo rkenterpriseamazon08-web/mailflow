@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mailflow Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Mailflow</h1>
+        <p>Import recipients, manage templates, and send client-type emails.</p>
+      </div>
+      <button id="templatesButton" class="secondary">Templates</button>
+    </header>
+
+    <main>
+      <section class="panel" id="importPanel">
+        <h2>Import Google Sheet or CSV</h2>
+        <div class="import-grid">
+          <label>
+            Google Sheet CSV link
+            <input id="sheetUrl" type="url" placeholder="Paste published Google Sheet CSV URL" />
+          </label>
+          <button id="loadSheet">Next</button>
+        </div>
+        <div class="divider">or</div>
+        <label class="file-input">
+          Upload downloaded CSV
+          <input id="csvFile" type="file" accept=".csv,text/csv" />
+        </label>
+        <p id="importMessage" class="message"></p>
+      </section>
+
+      <section class="panel hidden" id="tablePanel">
+        <div class="section-head">
+          <div>
+            <h2>Recipients</h2>
+            <p id="rowCount">0 rows loaded</p>
+          </div>
+          <div class="actions">
+            <label class="checkbox">
+              <input id="dryRun" type="checkbox" checked />
+              Preview only
+            </label>
+            <button id="sendEmails">Send Bulk Emails</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Client Type</th>
+                <th>Company</th>
+                <th>Template</th>
+                <th>Status</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="recipientsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="templatesDialog">
+      <form method="dialog" class="template-modal">
+        <div class="section-head">
+          <div>
+            <h2>Templates</h2>
+            <p>Each template is saved against one client type.</p>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Close">x</button>
+        </div>
+        <label>
+          Client type
+          <select id="templateType"></select>
+        </label>
+        <label>
+          Subject
+          <input id="templateSubject" type="text" />
+        </label>
+        <label>
+          Body HTML
+          <textarea id="templateBody" rows="12"></textarea>
+        </label>
+        <div class="actions">
+          <button id="saveTemplate" type="button">Save Template</button>
+        </div>
+        <p id="templateMessage" class="message"></p>
+      </form>
+    </dialog>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
