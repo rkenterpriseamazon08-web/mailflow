@@ -199,6 +199,35 @@ def choose_campaign_rows(df: pd.DataFrame, config: dict[str, Any]) -> list[tuple
     return rows
 
 
+def explain_campaign_rows(df: pd.DataFrame, config: dict[str, Any]) -> dict[str, int]:
+    cols = config.get("columns", {})
+    email_col = cols.get("email", "email")
+    status_col = cols.get("status", "status")
+    skip_col = cols.get("do_not_email", "do_not_email")
+    stats = {
+        "total": len(df),
+        "eligible": 0,
+        "do_not_email": 0,
+        "invalid_email": 0,
+        "not_pending": 0,
+    }
+
+    for _, row in df.iterrows():
+        email = str(row.get(email_col, "")).strip()
+        status = str(row.get(status_col, "")).strip().lower()
+        if truthy(row.get(skip_col, "")):
+            stats["do_not_email"] += 1
+            continue
+        if not validate_email(email):
+            stats["invalid_email"] += 1
+            continue
+        if status in {"", "pending", "queued"}:
+            stats["eligible"] += 1
+        else:
+            stats["not_pending"] += 1
+    return stats
+
+
 def choose_followup_rows(df: pd.DataFrame, config: dict[str, Any]) -> list[tuple[int, pd.Series]]:
     cols = config.get("columns", {})
     email_col = cols.get("email", "email")
@@ -290,6 +319,30 @@ def smtp_settings() -> dict[str, Any]:
         "password": os.environ["SMTP_PASSWORD"],
         "from_email": os.environ["FROM_EMAIL"],
     }
+
+
+def verify_smtp_login() -> None:
+    settings = smtp_settings()
+    with smtplib.SMTP(settings["host"], settings["port"], timeout=30) as smtp:
+        smtp.starttls()
+        smtp.login(settings["user"], settings["password"])
+
+
+def send_smtp_test_email() -> None:
+    settings = smtp_settings()
+    recipient = os.environ.get("TEST_RECIPIENT_EMAIL", settings["user"])
+    message = EmailMessage()
+    message["Subject"] = "Mailflow SMTP test"
+    message["From"] = formataddr(("Mailflow", settings["from_email"]))
+    message["To"] = recipient
+    message.set_content(
+        "This is a Mailflow SMTP test email. If you received this, Zoho SMTP sending is working."
+    )
+
+    with smtplib.SMTP(settings["host"], settings["port"], timeout=30) as smtp:
+        smtp.starttls()
+        smtp.login(settings["user"], settings["password"])
+        smtp.send_message(message)
 
 
 def send_email(email: RenderedEmail, config: dict[str, Any], dry_run: bool) -> str:
@@ -399,14 +452,28 @@ def run(args: argparse.Namespace) -> int:
             print(f"Template OK: {template}")
         return 0
 
+    if mode == "smtp-test":
+        send_smtp_test_email()
+        print("SMTP test email sent.")
+        return 0
+
     rows = choose_followup_rows(df, config) if mode == "followups" else choose_campaign_rows(df, config)
+    if mode == "campaign":
+        stats = explain_campaign_rows(df, config)
+        print(
+            "Campaign row summary: "
+            f"total={stats['total']}, eligible={stats['eligible']}, "
+            f"do_not_email={stats['do_not_email']}, invalid_email={stats['invalid_email']}, "
+            f"not_pending={stats['not_pending']}"
+        )
     max_emails = args.max_emails or int(config.get("sending", {}).get("max_emails_per_run", 25))
     rows = rows[:max_emails]
     emails = build_emails(rows, config, mode, args.template)
+    print(f"Prepared {len(emails)} email(s). dry_run={args.dry_run}")
 
     if not emails:
-        print("No eligible emails found.")
-        return 0
+        print("No eligible emails found or no matching templates were available.", file=sys.stderr)
+        return 2
 
     records: list[dict[str, Any]] = []
     sent_rows: list[int] = []
@@ -444,6 +511,11 @@ def run(args: argparse.Namespace) -> int:
 
     log_path = write_log(records)
     print(f"Wrote log: {log_path}")
+    print(
+        f"Send summary: sent={sum(1 for record in records if record['status'] == 'sent')}, "
+        f"dry_run={sum(1 for record in records if record['status'] == 'dry_run')}, "
+        f"failed={sum(1 for record in records if record['status'] == 'failed')}"
+    )
 
     if args.update_source and sent_rows and not args.dry_run:
         source_path = config.get("data_source", {}).get("path")
@@ -457,7 +529,7 @@ def run(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Mailflow GitHub Actions email runner")
     parser.add_argument("--config", default="campaigns/campaign_config.yml")
-    parser.add_argument("--mode", choices=["campaign", "followups", "validate"], default=None)
+    parser.add_argument("--mode", choices=["campaign", "followups", "validate", "smtp-test"], default=None)
     parser.add_argument("--template", default=None, help="Override template for campaign sends")
     parser.add_argument("--max-emails", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")

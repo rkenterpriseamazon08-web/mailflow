@@ -1,0 +1,38 @@
+name: Test SMTP Login
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smtp-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check SMTP secrets and login
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TEST_RECIPIENT_EMAIL: ${{ secrets.TEST_RECIPIENT_EMAIL }}
+        run: |
+          if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$FROM_EMAIL" ]; then
+            echo "::error::One or more SMTP secrets are missing."
+            exit 1
+          fi
+
+          python scripts/mailflow.py --mode smtp-test --config campaigns/campaign_config.yml

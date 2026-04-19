@@ -48,6 +48,18 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           GOOGLE_SHEET_CSV_URL: ${{ secrets.GOOGLE_SHEET_CSV_URL }}
         run: |
+          echo "dry_run input: ${{ inputs.dry_run }}"
+          echo "max_emails input: ${{ inputs.max_emails }}"
+          echo "config input: ${{ inputs.config }}"
+          if [ -z "$GOOGLE_SHEET_CSV_URL" ]; then
+            echo "::error::GOOGLE_SHEET_CSV_URL secret is missing."
+            exit 1
+          fi
+          if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$FROM_EMAIL" ]; then
+            echo "::error::One or more SMTP secrets are missing."
+            exit 1
+          fi
+
           TEMPLATE_INPUT="${{ inputs.template }}"
           TEMPLATE_ARG=""
           if [ -n "$TEMPLATE_INPUT" ]; then

@@ -90,11 +90,25 @@ GOOGLE_SHEET_CSV_URL=https://...
 
 1. Open the repository on GitHub.
 2. Go to **Actions**.
-3. Open **Send Campaign**.
-4. Click **Run workflow**.
+3. First open **Test SMTP Login**.
+4. Click **Run workflow**. This sends one test email to `TEST_RECIPIENT_EMAIL` if set, otherwise to `SMTP_USER`.
+5. Then open **Send Campaign**.
+6. Click **Run workflow**.
 5. Keep `dry_run` enabled first. This previews the emails and sends nothing.
 6. Check the workflow log and uploaded artifact.
 7. Run again with `dry_run` disabled to send directly to the email addresses in your Google Sheet.
+
+The campaign workflow prints a row summary:
+
+```text
+Campaign row summary: total=..., eligible=..., do_not_email=..., invalid_email=..., not_pending=...
+Prepared ... email(s). dry_run=false
+Send summary: sent=..., dry_run=..., failed=...
+```
+
+If `eligible=0`, set the sheet `status` column to `pending` or blank and make sure `do_not_email` is `no`.
+
+If `failed` is greater than zero, download the `mailflow-send-logs` artifact from the workflow run and check the `error` column.
 
 ## Recipient Columns
 
