@@ -110,7 +110,8 @@ textarea {
   background: #fff;
 }
 
-button {
+button,
+.button-link {
   border: 0;
   border-radius: 6px;
   padding: 11px 16px;
@@ -119,13 +120,20 @@ button {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: normal;
 }
 
-button:hover {
+button:hover,
+.button-link:hover {
   background: var(--accent-dark);
 }
 
-button.secondary {
+button.secondary,
+.button-link.secondary {
   background: #eef4f9;
   color: var(--accent-dark);
 }

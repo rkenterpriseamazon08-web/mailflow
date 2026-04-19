@@ -1,5 +1,4 @@
 const clientTypes = ["storage", "office", "cafe", "house", "public toilet", "security cabin"];
-const actionsUrl = "https://github.com/rkenterpriseamazon08-web/mailflow/actions/workflows/send-campaign.yml";
 
 const defaultTemplates = [
   {
@@ -48,7 +47,6 @@ const els = {
   rowCount: document.querySelector("#rowCount"),
   recipientsBody: document.querySelector("#recipientsBody"),
   sendEmails: document.querySelector("#sendEmails"),
-  openActions: document.querySelector("#openActions"),
   templatesButton: document.querySelector("#templatesButton"),
   templatesDialog: document.querySelector("#templatesDialog"),
   templateType: document.querySelector("#templateType"),
@@ -287,16 +285,11 @@ async function sendBulkEmails() {
   els.sendEmails.textContent = "Preview Bulk Emails";
 }
 
-function openRealSendWorkflow() {
-  window.open(actionsUrl, "_blank", "noopener,noreferrer");
-}
-
 els.loadSheet.addEventListener("click", importSheetUrl);
 els.csvFile.addEventListener("change", importCsvFile);
 els.templatesButton.addEventListener("click", () => els.templatesDialog.showModal());
 els.templateType.addEventListener("change", fillTemplateForm);
 els.saveTemplate.addEventListener("click", saveTemplate);
 els.sendEmails.addEventListener("click", sendBulkEmails);
-els.openActions.addEventListener("click", openRealSendWorkflow);
 
 fillTemplateOptions();

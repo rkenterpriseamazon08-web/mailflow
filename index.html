@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mailflow</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260419-2" />
   </head>
   <body>
     <header class="topbar">
@@ -46,7 +46,12 @@
           </div>
           <div class="actions">
             <button id="sendEmails">Preview Bulk Emails</button>
-            <button id="openActions" class="secondary">Send Real Emails in GitHub Actions</button>
+            <a
+              class="button-link secondary"
+              href="https://github.com/rkenterpriseamazon08-web/mailflow/actions/workflows/send-campaign.yml"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Send Real Emails in GitHub Actions</a>
           </div>
         </div>
         <div class="table-wrap">
@@ -96,6 +101,6 @@
       </form>
     </dialog>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260419-2"></script>
   </body>
 </html>
