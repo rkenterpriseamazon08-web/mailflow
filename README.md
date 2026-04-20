@@ -8,7 +8,7 @@ This is not a public web app. It is a GitHub-based runner designed for small, co
 
 The repository includes a small dashboard for the first phase of the app:
 
-- Paste a Google Sheet CSV link or upload a downloaded CSV.
+- Paste a Google Sheet link or upload a downloaded CSV/Excel file.
 - Click **Next** to preview all recipients in a table.
 - Open **Templates** to edit and save one template per client type.
 - On GitHub Pages, click **Preview Bulk Emails** to verify matching and row status.
@@ -42,7 +42,7 @@ FROM_EMAIL=your-email@yourdomain.com
 
 Keep **Preview only** checked for the first test. Preview mode imports the rows and shows the send status without sending real emails.
 
-On the published GitHub Pages site, the imported CSV is only for browser preview. GitHub Actions sends from the `GOOGLE_SHEET_CSV_URL` repository secret.
+On the published GitHub Pages site, the imported CSV/Excel file is only for browser preview. GitHub Actions sends from either the `GOOGLE_SHEET_CSV_URL` repository secret or a recipient file committed under `data/`.
 
 ## Folder Structure
 
@@ -98,11 +98,19 @@ SMTP_SECURITY=ssl
 
 If your Zoho account is in the India region, use `smtp.zoho.in` instead of `smtp.zoho.com`.
 
-Required when using Google Sheets:
+Required when using Google Sheets in GitHub Actions:
 
 ```text
 GOOGLE_SHEET_CSV_URL=https://...
 ```
+
+You may use a normal Google Sheet sharing link such as:
+
+```text
+https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?gid=0
+```
+
+Mailflow converts Google Sheet links to CSV export links automatically. The sheet must be viewable by anyone with the link, or published to web as CSV.
 
 `TEST_RECIPIENT_EMAIL` is not required. In this version, `dry_run` means preview only. It does not send emails anywhere.
 
@@ -114,9 +122,13 @@ GOOGLE_SHEET_CSV_URL=https://...
 4. Click **Run workflow**. This sends one test email to `TEST_RECIPIENT_EMAIL` if set, otherwise to `SMTP_USER`.
 5. Then open **Send Campaign**.
 6. Click **Run workflow**.
-5. Keep `dry_run` enabled first. This previews the emails and sends nothing.
-6. Check the workflow log and uploaded artifact.
-7. Run again with `dry_run` disabled to send directly to the email addresses in your Google Sheet.
+7. Choose the recipient source:
+   - `google_csv` uses the `GOOGLE_SHEET_CSV_URL` secret.
+   - `local_csv` reads a CSV file from the repository, for example `data/recipients_sample.csv`.
+  - `local_excel` reads an Excel file from the repository, for example `data/recipients_sample.xlsx`.
+8. Keep `dry_run` enabled first. This previews the emails and sends nothing.
+9. Check the workflow log and uploaded artifact.
+10. Run again with `dry_run` disabled to send directly to the email addresses.
 
 The campaign workflow prints a row summary:
 
@@ -130,9 +142,18 @@ If `eligible=0`, set the sheet `status` column to `pending` or blank and make su
 
 If `failed` is greater than zero, download the `mailflow-send-logs` artifact from the workflow run and check the `error` column.
 
+If `invalid_email` equals the total row count, download the `mailflow-send-logs` artifact and open `recipient-source-debug.txt`. This usually means the sheet link returned HTML instead of CSV, or the email column has the wrong header.
+
 ## Recipient Columns
 
-The live source is your Google Sheet through the `GOOGLE_SHEET_CSV_URL` secret. The sample file is `data/recipients_sample.csv`.
+The live source can be your Google Sheet through the `GOOGLE_SHEET_CSV_URL` secret, a CSV file, or an Excel file. Sample files are:
+
+```text
+data/recipients_sample.csv
+data/recipients_sample.xlsx
+```
+
+Do not commit real client lists to a public repository unless you intentionally want that data public.
 
 Expected columns:
 
@@ -158,6 +179,17 @@ Rows are eligible for campaign sending when:
 - `status` is blank, `pending`, or `queued`
 - `do_not_email` is not `yes`
 - `email` looks valid
+
+Accepted email column names:
+
+```text
+email
+email_address
+email_id
+mail
+mail_id
+recipient_email
+```
 
 ## Templates
 

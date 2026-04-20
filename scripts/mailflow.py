@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager
 import csv
+from io import StringIO
 import os
 import re
 import smtplib
@@ -14,6 +15,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
 import pandas as pd
@@ -23,6 +25,7 @@ from jinja2 import Environment, StrictUndefined
 
 ROOT = Path(__file__).resolve().parents[1]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+GOOGLE_SHEET_RE = re.compile(r"https://docs\.google\.com/spreadsheets/d/([^/]+)")
 SUPPORTED_CLIENT_TYPES = {
     "storage",
     "office",
@@ -31,6 +34,10 @@ SUPPORTED_CLIENT_TYPES = {
     "public toilet",
     "security cabin",
 }
+EMAIL_ALIASES = {"email", "email_address", "email_id", "mail", "mail_id", "recipient_email"}
+CLIENT_TYPE_ALIASES = {"client_type", "clienttype", "client", "type", "category"}
+NAME_ALIASES = {"name", "client_name", "customer_name", "full_name"}
+COMPANY_ALIASES = {"company", "company_name", "business", "business_name"}
 
 
 @dataclass
@@ -65,14 +72,64 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.fillna("")
 
 
+def coalesce_alias_columns(df: pd.DataFrame, aliases: set[str], target: str) -> pd.DataFrame:
+    existing = [column for column in df.columns if column in aliases]
+    if target in df.columns or not existing:
+        return df
+    df[target] = df[existing[0]]
+    return df
+
+
+def apply_column_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    df = coalesce_alias_columns(df, EMAIL_ALIASES, "email")
+    df = coalesce_alias_columns(df, CLIENT_TYPE_ALIASES, "client_type")
+    df = coalesce_alias_columns(df, NAME_ALIASES, "name")
+    df = coalesce_alias_columns(df, COMPANY_ALIASES, "company")
+    return df
+
+
+def google_sheet_csv_url(url: str) -> str:
+    match = GOOGLE_SHEET_RE.search(url)
+    if not match:
+        return url
+
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    fragment_query = parse_qs(parsed.fragment)
+    gid = query.get("gid", fragment_query.get("gid", ["0"]))[0]
+    sheet_id = match.group(1)
+    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?{urlencode({'format': 'csv', 'gid': gid})}"
+
+
+def read_csv_url(url: str) -> pd.DataFrame:
+    csv_url = google_sheet_csv_url(url.strip())
+    with urlopen(csv_url, timeout=30) as response:
+        content_type = response.headers.get("content-type", "")
+        raw = response.read()
+
+    text = raw.decode("utf-8-sig", errors="replace")
+    if "text/html" in content_type.lower() or text.lstrip().lower().startswith("<!doctype html") or text.lstrip().lower().startswith("<html"):
+        raise RuntimeError(
+            "Google Sheet URL returned HTML instead of CSV. Open the sheet sharing settings and set access to "
+            "'Anyone with the link can view', or use File -> Share -> Publish to web -> CSV."
+        )
+
+    return pd.read_csv(StringIO(text), sep=None, engine="python")
+
+
 def read_recipients(config: dict[str, Any]) -> pd.DataFrame:
     source = config.get("data_source", {})
-    source_type = source.get("type", "local_csv")
+    source_type = os.environ.get("DATA_SOURCE_TYPE", source.get("type", "local_csv")).strip()
+    source_path = os.environ.get("DATA_SOURCE_PATH", source.get("path", "")).strip()
 
     if source_type == "local_csv":
-        df = pd.read_csv(resolve_path(source["path"]))
+        if not source_path:
+            raise RuntimeError("DATA_SOURCE_PATH or data_source.path is required for local_csv")
+        df = pd.read_csv(resolve_path(source_path), sep=None, engine="python")
     elif source_type == "local_excel":
-        df = pd.read_excel(resolve_path(source["path"]))
+        if not source_path:
+            raise RuntimeError("DATA_SOURCE_PATH or data_source.path is required for local_excel")
+        df = pd.read_excel(resolve_path(source_path))
     elif source_type == "google_csv":
         url_env = source.get("url_env", "GOOGLE_SHEET_CSV_URL")
         sheet_url = os.environ.get(url_env)
@@ -80,15 +137,14 @@ def read_recipients(config: dict[str, Any]) -> pd.DataFrame:
             fallback_path = source.get("fallback_path")
             if fallback_path:
                 print(f"{url_env} is not set. Using fallback source: {fallback_path}")
-                df = pd.read_csv(resolve_path(fallback_path))
-                return normalize_columns(df)
+                df = pd.read_csv(resolve_path(fallback_path), sep=None, engine="python")
+                return apply_column_aliases(normalize_columns(df))
             raise RuntimeError(f"Missing environment variable: {url_env}")
-        with urlopen(sheet_url, timeout=30) as response:
-            df = pd.read_csv(response)
+        df = read_csv_url(sheet_url)
     else:
         raise RuntimeError(f"Unsupported data source type: {source_type}")
 
-    return normalize_columns(df)
+    return apply_column_aliases(normalize_columns(df))
 
 
 def normalize_client_type(value: Any) -> str:
@@ -181,6 +237,14 @@ def validate_email(email: str) -> bool:
     return bool(EMAIL_RE.match(email.strip()))
 
 
+def redact_email(email: str) -> str:
+    email = str(email).strip()
+    if "@" not in email:
+        return email[:3] + "***" if email else ""
+    local, domain = email.split("@", 1)
+    return f"{local[:2]}***@{domain}"
+
+
 def choose_campaign_rows(df: pd.DataFrame, config: dict[str, Any]) -> list[tuple[int, pd.Series]]:
     cols = config.get("columns", {})
     email_col = cols.get("email", "email")
@@ -227,6 +291,37 @@ def explain_campaign_rows(df: pd.DataFrame, config: dict[str, Any]) -> dict[str,
         else:
             stats["not_pending"] += 1
     return stats
+
+
+def write_source_debug(df: pd.DataFrame, config: dict[str, Any], stats: dict[str, int] | None = None) -> Path:
+    logs_dir = resolve_path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    path = logs_dir / "recipient-source-debug.txt"
+    cols = config.get("columns", {})
+    email_col = cols.get("email", "email")
+    client_type_col = cols.get("client_type", "client_type")
+    status_col = cols.get("status", "status")
+    skip_col = cols.get("do_not_email", "do_not_email")
+
+    lines = [
+        "Recipient source debug",
+        f"columns={list(df.columns)}",
+        f"row_count={len(df)}",
+    ]
+    if stats:
+        lines.append(f"stats={stats}")
+    lines.append("")
+    lines.append("First rows:")
+    for index, row in df.head(10).iterrows():
+        email = str(row.get(email_col, "")).strip()
+        lines.append(
+            f"row={index + 2} email={redact_email(email)} valid_email={validate_email(email)} "
+            f"client_type={row.get(client_type_col, '')} status={row.get(status_col, '')} "
+            f"do_not_email={row.get(skip_col, '')}"
+        )
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def choose_followup_rows(df: pd.DataFrame, config: dict[str, Any]) -> list[tuple[int, pd.Series]]:
@@ -473,6 +568,7 @@ def run(args: argparse.Namespace) -> int:
         return 0
 
     df = read_recipients(config)
+    print(f"Loaded source with {len(df)} row(s) and columns: {list(df.columns)}")
 
     if mode == "validate":
         print(f"Loaded {len(df)} recipient rows")
@@ -489,12 +585,20 @@ def run(args: argparse.Namespace) -> int:
     rows = choose_followup_rows(df, config) if mode == "followups" else choose_campaign_rows(df, config)
     if mode == "campaign":
         stats = explain_campaign_rows(df, config)
+        debug_path = write_source_debug(df, config, stats)
         print(
             "Campaign row summary: "
             f"total={stats['total']}, eligible={stats['eligible']}, "
             f"do_not_email={stats['do_not_email']}, invalid_email={stats['invalid_email']}, "
             f"not_pending={stats['not_pending']}"
         )
+        print(f"Wrote source debug: {debug_path}")
+        if "email" not in df.columns:
+            print(
+                "No usable email column found. Add a column named email, email_address, email_id, mail, mail_id, or recipient_email.",
+                file=sys.stderr,
+            )
+            return 2
     max_emails = args.max_emails or int(config.get("sending", {}).get("max_emails_per_run", 25))
     rows = rows[:max_emails]
     emails = build_emails(rows, config, mode, args.template)

@@ -81,6 +81,15 @@ function normalizeClientType(value) {
   return normalized;
 }
 
+function googleSheetCsvUrl(url) {
+  const match = String(url || "").match(/https:\/\/docs\.google\.com\/spreadsheets\/d\/([^/]+)/);
+  if (!match) return url;
+  const parsed = new URL(url);
+  const fragmentParams = new URLSearchParams(parsed.hash.replace(/^#/, ""));
+  const gid = parsed.searchParams.get("gid") || fragmentParams.get("gid") || "0";
+  return `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&gid=${encodeURIComponent(gid)}`;
+}
+
 function parseCsv(text) {
   const rows = [];
   let current = "";
@@ -112,6 +121,7 @@ function parseCsv(text) {
 
   row.push(current);
   if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+  if (!rows.length) return [];
 
   const headers = rows.shift().map(normalizeHeader);
   return rows.map((cells) => {
@@ -195,9 +205,12 @@ async function importSheetUrl() {
   }
   els.importMessage.textContent = "Loading sheet...";
   try {
-    const response = await fetch(url);
+    const response = await fetch(googleSheetCsvUrl(url));
     if (!response.ok) throw new Error("Could not read the CSV link.");
     const text = await response.text();
+    if (text.trim().toLowerCase().startsWith("<!doctype html") || text.trim().toLowerCase().startsWith("<html")) {
+      throw new Error("The Google Sheet link returned a web page instead of CSV.");
+    }
     state.rows = parseCsv(text);
     els.importMessage.textContent = "Sheet imported.";
     renderRows();
@@ -209,6 +222,30 @@ async function importSheetUrl() {
 function importCsvFile() {
   const file = els.csvFile.files[0];
   if (!file) return;
+  const extension = file.name.split(".").pop().toLowerCase();
+
+  if (extension === "xlsx" || extension === "xls") {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        if (!window.XLSX) throw new Error("Excel parser did not load. Please refresh and try again.");
+        const workbook = XLSX.read(reader.result, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const csv = XLSX.utils.sheet_to_csv(sheet);
+        state.rows = parseCsv(csv);
+        els.importMessage.textContent = "Excel file imported.";
+        renderRows();
+      } catch (error) {
+        els.importMessage.textContent = error.message;
+      }
+    };
+    reader.onerror = () => {
+      els.importMessage.textContent = "Could not read Excel file.";
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = () => {
     state.rows = parseCsv(String(reader.result || ""));

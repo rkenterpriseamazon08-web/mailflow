@@ -17,7 +17,7 @@
 
     <main>
       <section class="panel" id="importPanel">
-        <h2>Import Google Sheet or CSV</h2>
+        <h2>Import Google Sheet, CSV, or Excel</h2>
         <div class="import-grid">
           <label>
             Google Sheet CSV link
@@ -27,8 +27,8 @@
         </div>
         <div class="divider">or</div>
         <label class="file-input">
-          Upload downloaded CSV
-          <input id="csvFile" type="file" accept=".csv,text/csv" />
+          Upload downloaded CSV or Excel
+          <input id="csvFile" type="file" accept=".csv,text/csv,.xlsx,.xls" />
         </label>
         <p id="importMessage" class="message"></p>
       </section>
@@ -94,6 +94,7 @@
       </form>
     </dialog>
 
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="/static/app.js"></script>
   </body>
 </html>

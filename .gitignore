@@ -8,7 +8,9 @@ uploads/
 private/
 *.xlsx
 *.xls
+!data/*.xlsx
+!data/*.xls
 !data/recipients_sample.csv
 logs/*.csv
+logs/*.txt
 !logs/.gitkeep
-

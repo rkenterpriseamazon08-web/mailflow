@@ -99,6 +99,11 @@ def parse_csv_text(text: str) -> list[dict[str, str]]:
     return [normalize_row(row) for row in reader]
 
 
+def dataframe_rows_to_dicts(df) -> list[dict[str, str]]:
+    df = mailflow.apply_column_aliases(mailflow.normalize_columns(df))
+    return [normalize_row(row) for row in df.to_dict(orient="records")]
+
+
 def job_snapshot(job: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": job["id"],
@@ -204,11 +209,10 @@ async def import_url(request: Request) -> dict[str, list[dict[str, str]]]:
     if not url:
         raise HTTPException(status_code=400, detail="Google Sheet CSV URL is required")
     try:
-        with urlopen(url, timeout=30) as response:
-            text = response.read().decode("utf-8-sig")
+        df = mailflow.read_csv_url(url)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not read CSV URL: {exc}") from exc
-    return {"rows": parse_csv_text(text)}
+    return {"rows": dataframe_rows_to_dicts(df)}
 
 
 @app.post("/api/send")

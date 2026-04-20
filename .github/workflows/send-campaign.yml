@@ -15,6 +15,19 @@ on:
         description: "Maximum emails to process in this run"
         required: true
         default: "10"
+      data_source_type:
+        description: "Recipient source type"
+        required: true
+        type: choice
+        options:
+          - google_csv
+          - local_csv
+          - local_excel
+        default: "google_csv"
+      data_path:
+        description: "Repo file path for local_csv/local_excel, for example data/recipients.xlsx"
+        required: false
+        default: "data/recipients_sample.csv"
       dry_run:
         description: "Run without sending real emails"
         required: true
@@ -48,11 +61,15 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           SMTP_SECURITY: ${{ secrets.SMTP_SECURITY }}
           GOOGLE_SHEET_CSV_URL: ${{ secrets.GOOGLE_SHEET_CSV_URL }}
+          DATA_SOURCE_TYPE: ${{ inputs.data_source_type }}
+          DATA_SOURCE_PATH: ${{ inputs.data_path }}
         run: |
           echo "dry_run input: ${{ inputs.dry_run }}"
           echo "max_emails input: ${{ inputs.max_emails }}"
           echo "config input: ${{ inputs.config }}"
-          if [ -z "$GOOGLE_SHEET_CSV_URL" ]; then
+          echo "data_source_type input: ${{ inputs.data_source_type }}"
+          echo "data_path input: ${{ inputs.data_path }}"
+          if [ "${{ inputs.data_source_type }}" = "google_csv" ] && [ -z "$GOOGLE_SHEET_CSV_URL" ]; then
             echo "::error::GOOGLE_SHEET_CSV_URL secret is missing."
             exit 1
           fi
@@ -84,5 +101,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mailflow-send-logs
-          path: logs/*.csv
+          path: |
+            logs/*.csv
+            logs/*.txt
           if-no-files-found: ignore

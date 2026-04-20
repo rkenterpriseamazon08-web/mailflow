@@ -29,6 +29,13 @@ function normalizeHeader(value) {
   return String(value || "").trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
 }
 
+function normalizeClientType(value) {
+  const normalized = String(value || "").trim().toLowerCase().replaceAll("_", " ").replaceAll("-", " ");
+  if (normalized === "security") return "security cabin";
+  if (normalized === "toilet") return "public toilet";
+  return normalized;
+}
+
 function parseCsv(text) {
   const rows = [];
   let current = "";
@@ -60,6 +67,7 @@ function parseCsv(text) {
 
   row.push(current);
   if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+  if (!rows.length) return [];
 
   const headers = rows.shift().map(normalizeHeader);
   return rows.map((cells) => {
@@ -82,7 +90,7 @@ async function api(path, options = {}) {
 }
 
 function templateForType(clientType) {
-  const normalized = String(clientType || "").trim().toLowerCase().replaceAll("_", " ").replaceAll("-", " ");
+  const normalized = normalizeClientType(clientType);
   const found = state.templates.find((template) => template.clientType === normalized);
   return found ? found.clientType : "";
 }
@@ -171,6 +179,30 @@ async function importSheetUrl() {
 function importCsvFile() {
   const file = els.csvFile.files[0];
   if (!file) return;
+  const extension = file.name.split(".").pop().toLowerCase();
+
+  if (extension === "xlsx" || extension === "xls") {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        if (!window.XLSX) throw new Error("Excel parser did not load. Please refresh and try again.");
+        const workbook = XLSX.read(reader.result, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const csv = XLSX.utils.sheet_to_csv(sheet);
+        state.rows = parseCsv(csv);
+        els.importMessage.textContent = "Excel file imported.";
+        renderRows();
+      } catch (error) {
+        els.importMessage.textContent = error.message;
+      }
+    };
+    reader.onerror = () => {
+      els.importMessage.textContent = "Could not read Excel file.";
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = () => {
     state.rows = parseCsv(String(reader.result || ""));
