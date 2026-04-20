@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,6 +33,9 @@ jobs:
           SMTP_SECURITY: ${{ secrets.SMTP_SECURITY }}
           TEST_RECIPIENT_EMAIL: ${{ secrets.TEST_RECIPIENT_EMAIL }}
         run: |
+          echo "Running Mailflow commit: $(git rev-parse --short HEAD)"
+          echo "SMTP test uses Mailflow auto-detect for Zoho 587/starttls and 465/ssl."
+
           if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$FROM_EMAIL" ]; then
             echo "::error::One or more SMTP secrets are missing."
             exit 1

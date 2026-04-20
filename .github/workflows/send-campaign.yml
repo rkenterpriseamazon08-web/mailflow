@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -64,6 +66,7 @@ jobs:
           DATA_SOURCE_TYPE: ${{ inputs.data_source_type }}
           DATA_SOURCE_PATH: ${{ inputs.data_path }}
         run: |
+          echo "Running Mailflow commit: $(git rev-parse --short HEAD)"
           echo "dry_run input: ${{ inputs.dry_run }}"
           echo "max_emails input: ${{ inputs.max_emails }}"
           echo "config input: ${{ inputs.config }}"
