@@ -46,10 +46,17 @@ def load_config() -> dict[str, Any]:
 
 
 def normalize_row(row: dict[str, Any]) -> dict[str, str]:
-    return {
+    normalized = {
         str(key).strip().lower().replace(" ", "_").replace("-", "_"): str(value or "").strip()
         for key, value in row.items()
     }
+    normalized.setdefault("custom_note", normalized.get("custome_note", normalized.get("customer_note", normalized.get("note", normalized.get("notes", normalized.get("remarks", ""))))))
+    normalized.setdefault("service", normalized.get("services", normalized.get("requirement", normalized.get("requirements", normalized.get("project", normalized.get("project_type", ""))))))
+    normalized.setdefault("email", normalized.get("email_address", normalized.get("email_id", normalized.get("mail", normalized.get("mail_id", normalized.get("recipient_email", ""))))))
+    normalized.setdefault("client_type", normalized.get("clienttype", normalized.get("client", normalized.get("type", normalized.get("category", "")))))
+    normalized.setdefault("company", normalized.get("company_name", normalized.get("business", normalized.get("business_name", ""))))
+    normalized.setdefault("name", normalized.get("client_name", normalized.get("customer_name", normalized.get("full_name", ""))))
+    return normalized
 
 
 def template_path_for_client_type(client_type: str) -> Path:

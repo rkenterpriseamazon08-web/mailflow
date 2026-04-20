@@ -20,7 +20,7 @@ from urllib.request import urlopen
 
 import pandas as pd
 import yaml
-from jinja2 import Environment, StrictUndefined
+from jinja2 import Environment
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +38,8 @@ EMAIL_ALIASES = {"email", "email_address", "email_id", "mail", "mail_id", "recip
 CLIENT_TYPE_ALIASES = {"client_type", "clienttype", "client", "type", "category"}
 NAME_ALIASES = {"name", "client_name", "customer_name", "full_name"}
 COMPANY_ALIASES = {"company", "company_name", "business", "business_name"}
+CUSTOM_NOTE_ALIASES = {"custom_note", "custome_note", "customer_note", "note", "notes", "remarks"}
+SERVICE_ALIASES = {"service", "services", "requirement", "requirements", "project", "project_type"}
 
 
 @dataclass
@@ -85,6 +87,8 @@ def apply_column_aliases(df: pd.DataFrame) -> pd.DataFrame:
     df = coalesce_alias_columns(df, CLIENT_TYPE_ALIASES, "client_type")
     df = coalesce_alias_columns(df, NAME_ALIASES, "name")
     df = coalesce_alias_columns(df, COMPANY_ALIASES, "company")
+    df = coalesce_alias_columns(df, CUSTOM_NOTE_ALIASES, "custom_note")
+    df = coalesce_alias_columns(df, SERVICE_ALIASES, "service")
     return df
 
 
@@ -178,7 +182,7 @@ def parse_template(template_name: str) -> tuple[str, str, dict[str, Any]]:
 
 def render_template(template_name: str, context: dict[str, Any]) -> tuple[str, str]:
     subject_template, body_template, _ = parse_template(template_name)
-    env = Environment(autoescape=True, undefined=StrictUndefined)
+    env = Environment(autoescape=True)
     subject = env.from_string(subject_template).render(**context)
     html = env.from_string(body_template).render(**context)
     return subject, html

@@ -74,6 +74,17 @@ function normalizeHeader(value) {
   return String(value || "").trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
 }
 
+function normalizeRow(item) {
+  const row = { ...item };
+  if (!row.custom_note) row.custom_note = row.custome_note || row.customer_note || row.note || row.notes || row.remarks || "";
+  if (!row.service) row.service = row.services || row.requirement || row.requirements || row.project || row.project_type || "";
+  if (!row.email) row.email = row.email_address || row.email_id || row.mail || row.mail_id || row.recipient_email || "";
+  if (!row.client_type) row.client_type = row.clienttype || row.client || row.type || row.category || "";
+  if (!row.company) row.company = row.company_name || row.business || row.business_name || "";
+  if (!row.name) row.name = row.client_name || row.customer_name || row.full_name || "";
+  return row;
+}
+
 function normalizeClientType(value) {
   const normalized = String(value || "").trim().toLowerCase().replaceAll("_", " ").replaceAll("-", " ");
   if (normalized === "security") return "security cabin";
@@ -129,10 +140,11 @@ function parseCsv(text) {
     headers.forEach((header, index) => {
       item[header] = cells[index] || "";
     });
-    item.status = item.status || "ready";
-    item.error = "";
-    item.template = templateForType(item.client_type);
-    return item;
+    const row = normalizeRow(item);
+    row.status = row.status || "ready";
+    row.error = "";
+    row.template = templateForType(row.client_type);
+    return row;
   });
 }
 

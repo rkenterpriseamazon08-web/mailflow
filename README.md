@@ -191,6 +191,28 @@ mail_id
 recipient_email
 ```
 
+Accepted note column names:
+
+```text
+custom_note
+custome_note
+customer_note
+note
+notes
+remarks
+```
+
+Accepted service column names:
+
+```text
+service
+services
+requirement
+requirements
+project
+project_type
+```
+
 ## Templates
 
 Templates live in `templates/` and use Jinja-style placeholders. Every template must include one supported `clientType` in the front matter:
