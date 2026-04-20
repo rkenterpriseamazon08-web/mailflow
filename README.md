@@ -74,11 +74,13 @@ Required for real sending:
 ```text
 SMTP_HOST=smtp.zoho.com
 SMTP_PORT=587
-SMTP_SECURITY=starttls
+SMTP_SECURITY=auto
 SMTP_USER=your-email@yourdomain.com
 SMTP_PASSWORD=your-zoho-app-password
 FROM_EMAIL=your-email@yourdomain.com
 ```
+
+`SMTP_SECURITY=auto` is recommended. Mailflow will first try your saved host/port, then the common Zoho modes: `587/starttls` and `465/ssl`. If your Zoho account is in the India region, use `SMTP_HOST=smtp.zoho.in`; otherwise use `SMTP_HOST=smtp.zoho.com`.
 
 For Zoho SMTP, use one of these combinations:
 

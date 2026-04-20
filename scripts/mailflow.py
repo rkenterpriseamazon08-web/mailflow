@@ -6,6 +6,7 @@ import csv
 from io import StringIO
 import os
 import re
+import socket
 import smtplib
 import sys
 import time
@@ -422,14 +423,77 @@ def smtp_settings() -> dict[str, Any]:
     }
 
 
+def normalized_smtp_security(settings: dict[str, Any]) -> str:
+    security = settings.get("security", "auto")
+    if security == "auto":
+        return "ssl" if int(settings["port"]) == 465 else "starttls"
+    return security
+
+
+def smtp_candidate_settings(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    host = str(settings["host"]).strip()
+    lower_host = host.lower()
+    hosts = [host]
+    if lower_host == "smtp.zoho.com":
+        hosts.append("smtp.zoho.in")
+    elif lower_host == "smtp.zoho.in":
+        hosts.append("smtp.zoho.com")
+
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, int, str]] = set()
+
+    def add_candidate(candidate_host: str, candidate_port: int, candidate_security: str) -> None:
+        candidate = dict(settings)
+        candidate["host"] = candidate_host
+        candidate["port"] = candidate_port
+        candidate["security"] = candidate_security
+        resolved_security = normalized_smtp_security(candidate)
+        key = (candidate_host.lower(), candidate_port, resolved_security)
+        if key not in seen:
+            seen.add(key)
+            candidate["security"] = resolved_security
+            candidates.append(candidate)
+
+    for candidate_host in hosts:
+        add_candidate(candidate_host, int(settings["port"]), str(settings["security"]))
+        add_candidate(candidate_host, 587, "starttls")
+        add_candidate(candidate_host, 465, "ssl")
+
+    return candidates
+
+
+def describe_smtp_settings(settings: dict[str, Any]) -> str:
+    return f"{settings['host']}:{settings['port']}/{settings['security']}"
+
+
+def resolve_smtp_settings() -> dict[str, Any]:
+    settings = smtp_settings()
+    errors: list[str] = []
+
+    for candidate in smtp_candidate_settings(settings):
+        try:
+            with smtp_connection(candidate):
+                pass
+            print(f"SMTP login OK using {describe_smtp_settings(candidate)}")
+            return candidate
+        except Exception as exc:
+            errors.append(f"{describe_smtp_settings(candidate)} -> {exc}")
+
+    raise RuntimeError(
+        "SMTP login failed for all tried Zoho connection modes. "
+        "Use SMTP_HOST=smtp.zoho.in for India accounts or smtp.zoho.com for global accounts, "
+        "SMTP_PORT=587 with SMTP_SECURITY=starttls, or SMTP_PORT=465 with SMTP_SECURITY=ssl. "
+        "Make sure SMTP_PASSWORD is a Zoho app password, not your normal Zoho password. "
+        "Tried: " + " | ".join(errors)
+    )
+
+
 @contextmanager
 def smtp_connection(settings: dict[str, Any]):
     host = settings["host"]
     port = settings["port"]
-    security = settings["security"]
-
-    if security == "auto":
-        security = "ssl" if port == 465 else "starttls"
+    security = normalized_smtp_security(settings)
+    smtp = None
 
     try:
         if security == "ssl":
@@ -440,27 +504,30 @@ def smtp_connection(settings: dict[str, Any]):
                 smtp.starttls()
         smtp.login(settings["user"], settings["password"])
         yield smtp
+    except smtplib.SMTPAuthenticationError as exc:
+        raise RuntimeError(
+            "SMTP authentication failed. Check SMTP_USER and use a Zoho app password for SMTP_PASSWORD."
+        ) from exc
     except smtplib.SMTPServerDisconnected as exc:
         raise RuntimeError(
-            "SMTP server closed the connection. Check SMTP_HOST, SMTP_PORT, and SMTP_SECURITY. "
-            "For Zoho, use smtp.zoho.com or smtp.zoho.in with port 587 and SMTP_SECURITY=starttls, "
-            "or port 465 and SMTP_SECURITY=ssl."
+            "SMTP server closed the connection before login or send."
         ) from exc
+    except (smtplib.SMTPConnectError, smtplib.SMTPHeloError, smtplib.SMTPException, OSError, socket.timeout) as exc:
+        raise RuntimeError(f"SMTP connection failed: {exc}") from exc
     finally:
-        try:
-            smtp.quit()
-        except Exception:
-            pass
+        if smtp is not None:
+            try:
+                smtp.quit()
+            except Exception:
+                pass
 
 
 def verify_smtp_login() -> None:
-    settings = smtp_settings()
-    with smtp_connection(settings):
-        pass
+    resolve_smtp_settings()
 
 
 def send_smtp_test_email() -> None:
-    settings = smtp_settings()
+    settings = resolve_smtp_settings()
     recipient = os.environ.get("TEST_RECIPIENT_EMAIL", settings["user"])
     message = EmailMessage()
     message["Subject"] = "Mailflow SMTP test"
@@ -474,7 +541,12 @@ def send_smtp_test_email() -> None:
         smtp.send_message(message)
 
 
-def send_email(email: RenderedEmail, config: dict[str, Any], dry_run: bool) -> str:
+def send_email(
+    email: RenderedEmail,
+    config: dict[str, Any],
+    dry_run: bool,
+    settings: dict[str, Any] | None = None,
+) -> str:
     sending = config.get("sending", {})
 
     if dry_run:
@@ -483,7 +555,7 @@ def send_email(email: RenderedEmail, config: dict[str, Any], dry_run: bool) -> s
         return "dry_run"
 
     recipient = email.recipient
-    settings = smtp_settings()
+    settings = settings or smtp_settings()
     from_name = sending.get("from_name", "Mailflow")
     reply_to = sending.get("reply_to", "")
 
@@ -612,6 +684,10 @@ def run(args: argparse.Namespace) -> int:
         print("No eligible emails found or no matching templates were available.", file=sys.stderr)
         return 2
 
+    active_smtp_settings = None
+    if not args.dry_run:
+        active_smtp_settings = resolve_smtp_settings()
+
     records: list[dict[str, Any]] = []
     sent_rows: list[int] = []
     failures = 0
@@ -630,7 +706,7 @@ def run(args: argparse.Namespace) -> int:
             "error": "",
         }
         try:
-            record["status"] = send_email(email, config, args.dry_run)
+            record["status"] = send_email(email, config, args.dry_run, active_smtp_settings)
             if record["status"] == "sent":
                 sent_rows.append(email.row_number)
         except Exception as exc:
