@@ -82,6 +82,8 @@ FROM_EMAIL=your-email@yourdomain.com
 
 `SMTP_SECURITY=auto` is recommended. Mailflow will first try your saved host/port, then the common Zoho modes: `587/starttls` and `465/ssl`. If your Zoho account is in the India region, use `SMTP_HOST=smtp.zoho.in`; otherwise use `SMTP_HOST=smtp.zoho.com`.
 
+If the workflow says Zoho rejected the login, the code is reaching Zoho correctly. Replace `SMTP_PASSWORD` with a Zoho app password and make sure `SMTP_USER` is the full Zoho email address. Do not use your normal Zoho web login password for `SMTP_PASSWORD`.
+
 For Zoho SMTP, use one of these combinations:
 
 ```text

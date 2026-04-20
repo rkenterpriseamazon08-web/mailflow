@@ -43,6 +43,10 @@ CUSTOM_NOTE_ALIASES = {"custom_note", "custome_note", "customer_note", "note", "
 SERVICE_ALIASES = {"service", "services", "requirement", "requirements", "project", "project_type"}
 
 
+class SMTPAuthError(RuntimeError):
+    pass
+
+
 @dataclass
 class RenderedEmail:
     recipient: str
@@ -414,11 +418,11 @@ def smtp_settings() -> dict[str, Any]:
     if missing:
         raise RuntimeError("Missing SMTP environment variables: " + ", ".join(missing))
     return {
-        "host": os.environ["SMTP_HOST"],
-        "port": int(os.environ.get("SMTP_PORT", "587")),
-        "user": os.environ["SMTP_USER"],
-        "password": os.environ["SMTP_PASSWORD"],
-        "from_email": os.environ["FROM_EMAIL"],
+        "host": os.environ["SMTP_HOST"].strip(),
+        "port": int(os.environ.get("SMTP_PORT", "587").strip()),
+        "user": os.environ["SMTP_USER"].strip(),
+        "password": os.environ["SMTP_PASSWORD"].strip(),
+        "from_email": os.environ["FROM_EMAIL"].strip(),
         "security": os.environ.get("SMTP_SECURITY", "auto").strip().lower(),
     }
 
@@ -476,6 +480,14 @@ def resolve_smtp_settings() -> dict[str, Any]:
                 pass
             print(f"SMTP login OK using {describe_smtp_settings(candidate)}")
             return candidate
+        except SMTPAuthError as exc:
+            raise RuntimeError(
+                "Zoho SMTP reached successfully, but login was rejected. "
+                "Fix the GitHub Actions secrets: SMTP_USER must be the full Zoho email address, "
+                "FROM_EMAIL should normally be the same verified Zoho address, and SMTP_PASSWORD "
+                "must be a Zoho app password made for mail/SMTP access, not your normal Zoho password. "
+                "After changing the secret, run the 'Test SMTP Login' workflow before running a campaign."
+            ) from exc
         except Exception as exc:
             errors.append(f"{describe_smtp_settings(candidate)} -> {exc}")
 
@@ -505,9 +517,7 @@ def smtp_connection(settings: dict[str, Any]):
         smtp.login(settings["user"], settings["password"])
         yield smtp
     except smtplib.SMTPAuthenticationError as exc:
-        raise RuntimeError(
-            "SMTP authentication failed. Check SMTP_USER and use a Zoho app password for SMTP_PASSWORD."
-        ) from exc
+        raise SMTPAuthError("SMTP authentication failed.") from exc
     except smtplib.SMTPServerDisconnected as exc:
         raise RuntimeError(
             "SMTP server closed the connection before login or send."
